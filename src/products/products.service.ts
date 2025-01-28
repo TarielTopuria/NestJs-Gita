@@ -2,9 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { IProducts } from './DTOs/products.interface';
 import { CreateProductDto } from './DTOs/product_create.dto';
 import { UpdateProductDto } from './DTOs/product_update.dto';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class ProductsService {
+  constructor(private usersService: UsersService) { }
+
   private productsEn: IProducts[] = [
     {
       id: 1,
@@ -41,14 +44,17 @@ export class ProductsService {
 
   getAllProducts(
     lang: string,
-    header: { auth_token: string; },
+    header: { auth_token: string },
     categoryQuery?: string,
     price?: number,
-    id?: number
+    id?: number,
+    userId?: number
   ) {
-    if (!header.auth_token) throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
-    const products = lang === 'ka' ? this.productsKa : this.productsEn;
+    if (!header.auth_token) {
+      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+    }
 
+    const products = lang === 'ka' ? this.productsKa : this.productsEn;
     let filteredProducts = products;
 
     if (categoryQuery) {
@@ -67,8 +73,18 @@ export class ProductsService {
       filteredProducts = filteredProducts.filter((product) => product.id === id);
     }
 
+    if (userId) {
+      const user = this.usersService.getUserById(userId);
+      if (user && this.isSubscriptionActive(user.subscriptionDate)) {
+        filteredProducts = filteredProducts.map(product => ({
+          ...product,
+          price: product.price * 0.8,
+        }));
+      }
+    }
+
     return filteredProducts;
-  };
+  }
 
   getProductById(id: number) {
     const product = this.productsEn.find(el => el.id === id);
@@ -112,5 +128,17 @@ export class ProductsService {
     if (newProduct.category) product.category = newProduct.category;
 
     return product;
+  }
+
+  private isSubscriptionActive(subscriptionDateString: string): boolean {
+    if (!subscriptionDateString) return false;
+
+    const subscriptionDate = new Date(subscriptionDateString);
+    const now = new Date();
+
+    const diffMs = now.getTime() - subscriptionDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    return diffDays <= 30;
   }
 }

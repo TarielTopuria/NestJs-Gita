@@ -4,22 +4,26 @@ import { UpdateUserDto } from "./DTOs/update_user.dto";
 
 @Injectable()
 export class UsersService {
-  private users = [{
-    id: 1,
-    firstName: "Tato",
-    lastName: "Topuria",
-    email: "TatoTophuria@gmail.com",
-    phoneNumber: "123456789",
-    gender: "Male"
-  },
-  {
-    id: 2,
-    firstName: "Giorgi",
-    lastName: "Giorgadze",
-    email: "GiorgiGiorgadze@gmail.to",
-    phoneNumber: "0987654321",
-    gender: "Male"
-  }];
+  private users = [
+    {
+      id: 1,
+      firstName: "Tato",
+      lastName: "Topuria",
+      email: "TatoTophuria@gmail.com",
+      phoneNumber: "123456789",
+      gender: "Male",
+      subscriptionDate: "2024-12-01T10:00:00.000Z"
+    },
+    {
+      id: 2,
+      firstName: "Giorgi",
+      lastName: "Giorgadze",
+      email: "GiorgiGiorgadze@gmail.to",
+      phoneNumber: "0987654321",
+      gender: "Male",
+      subscriptionDate: "2024-11-13T10:00:00.000Z"
+    },
+  ];
 
   getAllUsers() {
     return this.users;
@@ -37,7 +41,8 @@ export class UsersService {
       lastName: body.lastName,
       email: body.email,
       phoneNumber: body.phoneNumber,
-      gender: body.gender
+      gender: body.gender,
+      subscriptionDate: new Date().toISOString()
     }
 
     this.users.push(newUser);

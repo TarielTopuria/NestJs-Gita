@@ -10,12 +10,15 @@ export class ProductsController {
 
   @Get()
   getAllProductsWithCategory(
-    @Query('category') categoryQuery,
-    @Headers() header,
-    @Query('price', new PricePipe({ optional: false })) price,
-    @Query('id', new ParseIntPipe( { optional: true })) id,
-    @Query('lang', new DefaultValuePipe('en')) lang) {
-    return this.productsService.getAllProducts(lang, header, categoryQuery, Number(price), id);
+    @Headers('auth_token') authToken: string,
+    @Headers('user_id') userId: string,
+    @Query('category') categoryQuery: string,
+    @Query('price', new PricePipe({ optional: false })) price: number,
+    @Query('id', new ParseIntPipe({ optional: true })) id: number,
+    @Query('lang', new DefaultValuePipe('en')) lang: string
+  ) {
+    const parsedUserId = userId ? parseInt(userId, 10) : undefined;
+    return this.productsService.getAllProducts(lang, { auth_token: authToken }, categoryQuery, Number(price), id, parsedUserId);
   };
 
   @Get(':id')

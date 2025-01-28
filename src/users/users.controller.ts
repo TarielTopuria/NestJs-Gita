@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, UseGuards } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./DTOs/create_user.dto";
 import { UpdateUserDto } from "./DTOs/update_user.dto";
+import { IsAdmin } from "./admin.guard";
 
 @Controller('users')
 export class UserController {
@@ -20,6 +21,7 @@ export class UserController {
   }
 
   @Post()
+  @UseGuards(IsAdmin)
   createUser(@Body() body: CreateUserDto) {
     const createdUser = this.usersService.createUser(body);
     if (!createdUser.firstName || !createdUser.lastName || !createdUser.email) throw new HttpException('name and age is required', HttpStatus.BAD_REQUEST);
@@ -27,11 +29,13 @@ export class UserController {
   }
 
   @Delete(':id')
+  @UseGuards(IsAdmin)
   deleteUser(@Param() params) {
     return this.usersService.deleteUser(Number(params.id));
   }
 
   @Put(':id')
+  @UseGuards(IsAdmin)
   updateUser(@Param() params, @Body() updateDto: UpdateUserDto) {
     return this.usersService.updateUser(Number(params.id), updateDto);
   }

@@ -1,25 +1,32 @@
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { CreateExpenseDto } from "./DTOs/create_expense.dto";
 import { UpdateExpenseDto } from "./DTOs/update_expense.dto";
+import { UsersService } from "src/users/users.service";
 
 @Injectable()
 export class ExpensesService {
-  private expenses = [{
-    id: 1,
-    category: "Food",
-    productName: "Dinner",
-    quantity: 2,
-    price: 15,
-    totalPrice: 30
-  },
-  {
-    id: 2,
-    category: "Transportation",
-    productName: "Petrol",
-    quantity: 30,
-    price: 3,
-    totalPrice: 90
-  }];
+  constructor(private readonly usersService: UsersService) {}
+  
+  private expenses = [
+    {
+      id: 1,
+      category: "Food",
+      productName: "Dinner",
+      quantity: 2,
+      price: 15,
+      totalPrice: 30,
+      userId: 1
+    },
+    {
+      id: 2,
+      category: "Transportation",
+      productName: "Petrol",
+      quantity: 30,
+      price: 3,
+      totalPrice: 90,
+      userId: 2
+    }
+  ];
 
   getAllExpenses() {
     return this.expenses;
@@ -29,7 +36,12 @@ export class ExpensesService {
     return this.expenses.find(el => el.id === id);
   }
 
-  createExpense(body: CreateExpenseDto) {
+  createExpense(body: CreateExpenseDto, userId: number) {
+    const existingUser = this.usersService.getUserById(userId);
+    if (!existingUser) {
+      throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
+    }
+
     const lastId = this.expenses[this.expenses.length - 1]?.id || 0;
     const newExpense = {
       id: lastId + 1,
@@ -37,11 +49,11 @@ export class ExpensesService {
       productName: body.productName,
       quantity: body.quantity,
       price: body.price,
-      totalPrice: body.quantity * body.price
-    }
+      totalPrice: body.quantity * body.price,
+      userId
+    };
 
     this.expenses.push(newExpense);
-
     return newExpense;
   }
 

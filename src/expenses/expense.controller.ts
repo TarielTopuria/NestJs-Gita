@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Req, UseGuards } from "@nestjs/common";
 import { ExpensesService } from "./expense.service";
 import { CreateExpenseDto } from "./DTOs/create_expense.dto";
 import { UpdateExpenseDto } from "./DTOs/update_expense.dto";
+import { HasUserId } from "src/users/hasUser.guard";
 
 @Controller('expenses')
 export class ExpenseController {
@@ -20,8 +21,10 @@ export class ExpenseController {
   }
 
   @Post()
-  createExpense(@Body() body: CreateExpenseDto) {
-    const createdExpense = this.expensesService.createExpense(body);
+  @UseGuards(HasUserId)
+  createExpense(@Req() request, @Body() body: CreateExpenseDto) {
+    const userId = request.userId;
+    const createdExpense = this.expensesService.createExpense(body, userId);
     if (!createdExpense.category || !createdExpense.productName || !createdExpense.quantity || !createdExpense.price || !createdExpense.quantity) throw new HttpException('All fields are required', HttpStatus.BAD_REQUEST);
     return createdExpense;
   }
