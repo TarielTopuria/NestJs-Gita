@@ -8,20 +8,27 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards
 } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./DTOs/create_user.dto";
 import { UpdateUserDto } from "./DTOs/update_user.dto";
 import { IsAdmin } from "./admin.guard";
+import { faker } from '@faker-js/faker';
 
 @Controller('users')
 export class UserController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   @Get()
-  async getUsers() {
-    return await this.usersService.getAllUsers();
+  async getUsers(@Query('page') page = 1, @Query('limit') limit = 10) {
+    let pageNum = +page || 1;
+    let limitNum = +limit || 10;
+
+    limitNum = Math.min(limitNum, 50);
+
+    return this.usersService.getAllUsersPaginated(pageNum, limitNum);
   }
 
   @Get(':id')
@@ -57,5 +64,32 @@ export class UserController {
   @UseGuards(IsAdmin)
   async updateUser(@Param('id') id: string, @Body() updateDto: UpdateUserDto) {
     return await this.usersService.updateUser(id, updateDto);
+  }
+
+  @Get('count')
+  async getUsersCount() {
+    return this.usersService.countUsers();
+  }
+
+
+  @Post('seed')
+  async seedUsers() {
+    const usersToCreate = 30000;
+    const bulkData = [];
+
+    for (let i = 0; i < usersToCreate; i++) {
+      bulkData.push({
+        firstName: faker.person.firstName(),
+        lastName: faker.person.lastName(),
+        email: faker.internet.email(),
+        phoneNumber: faker.phone.number(),
+        gender: faker.person.sex(),
+        subscriptionDate: new Date().toISOString(),
+      });
+    }
+
+    await this.usersService.bulkCreate(bulkData);
+
+    return { message: `${usersToCreate} users created` };
   }
 }

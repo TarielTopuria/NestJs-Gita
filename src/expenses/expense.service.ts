@@ -29,6 +29,7 @@ export class ExpensesService {
     if (!existingUser) {
       throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
     }
+
     const totalPrice = body.quantity * body.price;
     const newExpense = new this.expenseModel({
       category: body.category,
@@ -39,8 +40,13 @@ export class ExpensesService {
       userId,
     });
 
-    return newExpense.save();
+    const savedExpense = await newExpense.save();
+
+    await this.usersService.addExpenseToUser(userId, savedExpense.id);
+
+    return savedExpense;
   }
+
 
   async deleteExpense(id: string): Promise<Expense> {
     const deleted = await this.expenseModel.findByIdAndDelete(id).exec();

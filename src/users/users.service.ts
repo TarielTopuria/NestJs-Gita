@@ -47,4 +47,29 @@ export class UsersService {
 
     return updatedUser;
   }
+
+  async addExpenseToUser(userId: string, expenseId: string) {
+    await this.userModel.findByIdAndUpdate(
+      userId,
+      { $push: { expenses: expenseId } },
+      { new: true },
+    );
+  }
+
+  async countUsers(): Promise<number> {
+    return this.userModel.countDocuments();
+  }
+
+  async bulkCreate(usersData: Array<Partial<User>>) {
+    return this.userModel.insertMany(usersData);
+  }
+
+  async getAllUsersPaginated(page: number, limit: number): Promise<User[]> {
+    const skip = (page - 1) * limit;
+    return this.userModel
+      .find()
+      .skip(skip)
+      .limit(limit)
+      .exec();
+  }
 }
