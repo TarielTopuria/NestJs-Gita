@@ -1,72 +1,50 @@
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { CreateUserDto } from "./DTOs/create_user.dto";
 import { UpdateUserDto } from "./DTOs/update_user.dto";
+import { User } from "./schema/user.schema";
+import { Model } from "mongoose";
+import { InjectModel } from "@nestjs/mongoose";
 
 @Injectable()
 export class UsersService {
-  private users = [
-    {
-      id: 1,
-      firstName: "Tato",
-      lastName: "Topuria",
-      email: "TatoTophuria@gmail.com",
-      phoneNumber: "123456789",
-      gender: "Male",
-      subscriptionDate: "2024-12-01T10:00:00.000Z"
-    },
-    {
-      id: 2,
-      firstName: "Giorgi",
-      lastName: "Giorgadze",
-      email: "GiorgiGiorgadze@gmail.to",
-      phoneNumber: "0987654321",
-      gender: "Male",
-      subscriptionDate: "2024-11-13T10:00:00.000Z"
-    },
-  ];
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+  ) { }
 
-  getAllUsers() {
-    return this.users;
+  async getAllUsers(): Promise<User[]> {
+    return this.userModel.find().exec();
   }
 
-  getUserById(id: number) {
-    return this.users.find(el => el.id === id);
+  async getUserById(id: string): Promise<User | null> {
+    const user = await this.userModel.findById(id).exec();
+    return user;
   }
 
-  createUser(body: CreateUserDto) {
-    const lastId = this.users[this.users.length - 1]?.id || 0;
-    const newUser = {
-      id: lastId + 1,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      email: body.email,
-      phoneNumber: body.phoneNumber,
-      gender: body.gender,
-      subscriptionDate: new Date().toISOString()
+  async createUser(body: CreateUserDto): Promise<User> {
+    const newUser = new this.userModel({
+      ...body,
+      subscriptionDate: new Date().toISOString(),
+    });
+    return newUser.save();
+  }
+
+  async deleteUser(id: string): Promise<User> {
+    const deletedUser = await this.userModel.findByIdAndDelete(id).exec();
+    if (!deletedUser) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    return deletedUser;
+  }
+
+  async updateUser(id: string, newUser: UpdateUserDto): Promise<User> {
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(id, newUser, { new: true })
+      .exec();
+
+    if (!updatedUser) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    this.users.push(newUser);
-
-    return newUser;
-  }
-
-  deleteUser(id: number) {
-    const index = this.users.findIndex(el => el.id === id);
-    if (index === -1) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-    return this.users.splice(index, 1);
-  }
-
-  updateUser(id: number, newUser: UpdateUserDto) {
-    const index = this.users.findIndex((x) => x.id === id);
-
-    if (index === -1) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-
-    if (newUser.firstName) this.users[index].firstName = newUser.firstName;
-    if (newUser.lastName) this.users[index].lastName = newUser.lastName;
-    if (newUser.email) this.users[index].email = newUser.email;
-    if (newUser.phoneNumber) this.users[index].phoneNumber = newUser.phoneNumber;
-    if (newUser.gender) this.users[index].gender = newUser.gender;
-
-    return this.users[index];
+    return updatedUser;
   }
 }

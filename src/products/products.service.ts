@@ -1,144 +1,106 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { IProducts } from './DTOs/products.interface';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { UsersService } from '../users/users.service';
 import { CreateProductDto } from './DTOs/product_create.dto';
 import { UpdateProductDto } from './DTOs/product_update.dto';
-import { UsersService } from '../users/users.service';
+import { Product } from './schema/products.schema';
 
 @Injectable()
 export class ProductsService {
-  constructor(private usersService: UsersService) { }
+  constructor(
+    private readonly usersService: UsersService,
+    @InjectModel(Product.name) private readonly productModel: Model<Product>,
+  ) { }
 
-  private productsEn: IProducts[] = [
-    {
-      id: 1,
-      name: "Apple",
-      price: 2,
-      category: "Food",
-      createdAt: "2024-12-21T21:29:05.744Z",
-    },
-    {
-      id: 2,
-      name: "Banana",
-      price: 3,
-      category: "Food",
-      createdAt: "2024-12-20T21:29:05.744Z",
-    },
-  ];
-
-  private productsKa: IProducts[] = [
-    {
-      id: 1,
-      name: "ვაშლი",
-      price: 2,
-      category: "საკვები",
-      createdAt: "2024-12-21T21:29:05.744Z",
-    },
-    {
-      id: 2,
-      name: "ბანანი",
-      price: 3,
-      category: "საკვები",
-      createdAt: "2024-12-20T21:29:05.744Z",
-    },
-  ];
-
-  getAllProducts(
+  async getAllProducts(
     lang: string,
     header: { auth_token: string },
     categoryQuery?: string,
     price?: number,
-    id?: number,
-    userId?: number
-  ) {
-    if (!header.auth_token) {
-      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+    id?: string,
+    userId?: string
+  ): Promise<any[]> {
+    if (!header?.auth_token) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
-    const products = lang === 'ka' ? this.productsKa : this.productsEn;
-    let filteredProducts = products;
-
+    const filter: any = {};
+    if (lang) filter.lang = lang;
     if (categoryQuery) {
-      filteredProducts = filteredProducts.filter(
-        (product) => product.category.toLowerCase() === categoryQuery.toLowerCase()
-      );
+      filter.category = new RegExp(`^${categoryQuery}$`, 'i');
     }
-
-    if (price) {
-      filteredProducts = filteredProducts.filter(
-        (product) => product.price > price
-      );
-    }
-
     if (id) {
-      filteredProducts = filteredProducts.filter((product) => product.id === id);
+      filter._id = id;
     }
+    if (price) {
+      filter.price = { $gt: price };
+    }
+
+    let products = await this.productModel.find(filter).lean().exec();
 
     if (userId) {
-      const user = this.usersService.getUserById(userId);
+      const user = await this.usersService.getUserById(userId);
       if (user && this.isSubscriptionActive(user.subscriptionDate)) {
-        filteredProducts = filteredProducts.map(product => ({
-          ...product,
-          price: product.price * 0.8,
+        products = products.map((p) => ({
+          ...p,
+          price: p.price * 0.8,
         }));
       }
     }
 
-    return filteredProducts;
+    return products;
   }
 
-  getProductById(id: number) {
-    const product = this.productsEn.find(el => el.id === id);
-    if (!product) throw new HttpException("Product Not Found!", HttpStatus.BAD_REQUEST);
+  async getProductById(id: string): Promise<Product> {
+    const product = await this.productModel.findById(id).exec();
+    if (!product) {
+      throw new HttpException('Product Not Found!', HttpStatus.BAD_REQUEST);
+    }
     return product;
   }
 
-  createProduct(body: CreateProductDto) {
-    const lastId = this.productsEn[this.productsEn.length - 1]?.id || 0;
-
-    if (!body.name || !body.price || !body.category) throw new HttpException("Name, price and category are required", HttpStatus.BAD_REQUEST);
-
-    const newProduct = {
-      id: lastId + 1,
-      name: body.name,
-      price: body.price,
-      category: body.category,
-      createdAt: new Date().toISOString()
+  async createProduct(body: CreateProductDto): Promise<Product> {
+    if (!body.name || !body.price || !body.category) {
+      throw new HttpException(
+        'Name, price and category are required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    this.productsEn.push(newProduct);
+    const newProduct = new this.productModel({
+      ...body,
+      createdAt: new Date().toISOString(),
+    });
 
-    return newProduct;
+    return newProduct.save();
   }
 
-  deleteProduct(id: number) {
-    const index = this.productsEn.findIndex(el => el.id === id);
-    if (index === -1) throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
-    return this.productsEn.splice(index, 1);
+  async deleteProduct(id: string): Promise<Product> {
+    const deleted = await this.productModel.findByIdAndDelete(id).exec();
+    if (!deleted) {
+      throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
+    }
+    return deleted;
   }
 
-  updateProduct(id: number, newProduct: UpdateProductDto) {
-    const index = this.productsEn.findIndex((x) => x.id === id);
+  async updateProduct(id: string, newProduct: UpdateProductDto): Promise<Product> {
+    const updated = await this.productModel
+      .findByIdAndUpdate(id, newProduct, { new: true })
+      .exec();
 
-    if (index === -1) throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
-
-    const product = this.productsEn[index];
-
-    if (newProduct.name) product.name = newProduct.name;
-    if (newProduct.price) product.price = newProduct.price;
-    if (newProduct.category) product.category = newProduct.category;
-
-    return product;
+    if (!updated) {
+      throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
+    }
+    return updated;
   }
 
   private isSubscriptionActive(subscriptionDateString: string): boolean {
     if (!subscriptionDateString) return false;
-
     const subscriptionDate = new Date(subscriptionDateString);
     const now = new Date();
-
     const diffMs = now.getTime() - subscriptionDate.getTime();
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
-
     return diffDays <= 30;
   }
 }

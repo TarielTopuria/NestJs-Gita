@@ -1,4 +1,17 @@
-import { Body, Controller, DefaultValuePipe, Delete, Get, Headers, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+// products.controller.ts
+import {
+  Body,
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Put,
+  Query
+} from '@nestjs/common';
+import { ParseIntPipe } from '@nestjs/common'; // if needed
 import { ProductsService } from './products.service';
 import { PricePipe } from './Pipes/price.pipe';
 import { CreateProductDto } from './DTOs/product_create.dto';
@@ -6,38 +19,49 @@ import { UpdateProductDto } from './DTOs/product_update.dto';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private productsService: ProductsService) { }
+  constructor(private productsService: ProductsService) {}
 
   @Get()
-  getAllProductsWithCategory(
+  async getAllProductsWithCategory(
     @Headers('auth_token') authToken: string,
     @Headers('user_id') userId: string,
     @Query('category') categoryQuery: string,
+    // We still use PricePipe for demonstration, or you can remove it if you want
     @Query('price', new PricePipe({ optional: false })) price: number,
-    @Query('id', new ParseIntPipe({ optional: true })) id: number,
+    // We'll treat 'id' as a string, because it's a Mongo _id
+    @Query('id') id: string,
     @Query('lang', new DefaultValuePipe('en')) lang: string
   ) {
-    const parsedUserId = userId ? parseInt(userId, 10) : undefined;
-    return this.productsService.getAllProducts(lang, { auth_token: authToken }, categoryQuery, Number(price), id, parsedUserId);
-  };
+    // userId is optional, so if not present it stays undefined
+    const finalUserId = userId || undefined;
+
+    return this.productsService.getAllProducts(
+      lang,
+      { auth_token: authToken },
+      categoryQuery,
+      price,
+      id,
+      finalUserId
+    );
+  }
 
   @Get(':id')
-  getProductById(@Param('id', ParseIntPipe) id) {
+  async getProductById(@Param('id') id: string) {
     return this.productsService.getProductById(id);
-  };
+  }
 
   @Post()
-  createProduct(@Body() body: CreateProductDto) {
+  async createProduct(@Body() body: CreateProductDto) {
     return this.productsService.createProduct(body);
-  };
+  }
 
   @Delete(':id')
-  deleteProduct(@Param('id', ParseIntPipe) id) {
+  async deleteProduct(@Param('id') id: string) {
     return this.productsService.deleteProduct(id);
-  };
+  }
 
   @Put(':id')
-  updateProduct(@Param() params, @Body() updateDto: UpdateProductDto) {
-    return this.productsService.updateProduct(Number(params.id), updateDto);
-  };
+  async updateProduct(@Param('id') id: string, @Body() updateDto: UpdateProductDto) {
+    return this.productsService.updateProduct(id, updateDto);
+  }
 }

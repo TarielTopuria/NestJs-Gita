@@ -1,88 +1,70 @@
+// expense.service.ts
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+
 import { CreateExpenseDto } from "./DTOs/create_expense.dto";
 import { UpdateExpenseDto } from "./DTOs/update_expense.dto";
 import { UsersService } from "src/users/users.service";
+import { Expense } from "./schema/expense.schema";
+
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly usersService: UsersService) {}
-  
-  private expenses = [
-    {
-      id: 1,
-      category: "Food",
-      productName: "Dinner",
-      quantity: 2,
-      price: 15,
-      totalPrice: 30,
-      userId: 1
-    },
-    {
-      id: 2,
-      category: "Transportation",
-      productName: "Petrol",
-      quantity: 30,
-      price: 3,
-      totalPrice: 90,
-      userId: 2
-    }
-  ];
+  constructor(
+    private readonly usersService: UsersService,
+    @InjectModel(Expense.name) private readonly expenseModel: Model<Expense>,
+  ) { }
 
-  getAllExpenses() {
-    return this.expenses;
+  async getAllExpenses(): Promise<Expense[]> {
+    return this.expenseModel.find().exec();
   }
 
-  getExpenseById(id: number) {
-    return this.expenses.find(el => el.id === id);
+  async getExpenseById(id: string): Promise<Expense | null> {
+    return this.expenseModel.findById(id).populate('userId').exec();
   }
 
-  createExpense(body: CreateExpenseDto, userId: number) {
-    const existingUser = this.usersService.getUserById(userId);
+  async createExpense(body: CreateExpenseDto, userId: string): Promise<Expense> {
+    const existingUser = await this.usersService.getUserById(userId);
     if (!existingUser) {
       throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
     }
-
-    const lastId = this.expenses[this.expenses.length - 1]?.id || 0;
-    const newExpense = {
-      id: lastId + 1,
+    const totalPrice = body.quantity * body.price;
+    const newExpense = new this.expenseModel({
       category: body.category,
       productName: body.productName,
       quantity: body.quantity,
       price: body.price,
-      totalPrice: body.quantity * body.price,
-      userId
-    };
+      totalPrice,
+      userId,
+    });
 
-    this.expenses.push(newExpense);
-    return newExpense;
+    return newExpense.save();
   }
 
-  deleteExpense(id: number) {
-    const index = this.expenses.findIndex(el => el.id === id);
-    if (index === -1) throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
-    return this.expenses.splice(index, 1);
+  async deleteExpense(id: string): Promise<Expense> {
+    const deleted = await this.expenseModel.findByIdAndDelete(id).exec();
+    if (!deleted) {
+      throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
+    }
+    return deleted;
   }
 
-  updateExpense(id: number, newExpense: UpdateExpenseDto) {
-    const index = this.expenses.findIndex((x) => x.id === id);
 
-    if (index === -1) throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
-
-    const expense = this.expenses[index];
+  async updateExpense(id: string, newExpense: UpdateExpenseDto): Promise<Expense> {
+    const expense = await this.expenseModel.findById(id).exec();
+    if (!expense) {
+      throw new HttpException('Expense not found', HttpStatus.NOT_FOUND);
+    }
 
     if (newExpense.category) expense.category = newExpense.category;
     if (newExpense.productName) expense.productName = newExpense.productName;
-    if (newExpense.quantity) expense.quantity = newExpense.quantity;
-    if (newExpense.price) expense.price = newExpense.price;
+    if (typeof newExpense.quantity === 'number') expense.quantity = newExpense.quantity;
+    if (typeof newExpense.price === 'number') expense.price = newExpense.price;
 
-    if (newExpense.price && newExpense.quantity) {
-      expense.totalPrice = newExpense.price * newExpense.quantity;
-    } else if (newExpense.price) {
-      expense.totalPrice = newExpense.price * expense.quantity;
-    } else if (newExpense.quantity) {
-      expense.totalPrice = expense.price * newExpense.quantity;
-    }
+    expense.totalPrice = expense.price * expense.quantity;
 
+    await expense.save();
     return expense;
   }
 }
