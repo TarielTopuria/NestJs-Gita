@@ -1,7 +1,6 @@
-// expense.service.ts
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 
 import { CreateExpenseDto } from "./DTOs/create_expense.dto";
 import { UpdateExpenseDto } from "./DTOs/update_expense.dto";
@@ -24,7 +23,7 @@ export class ExpensesService {
     return this.expenseModel.findById(id).populate('userId').exec();
   }
 
-  async createExpense(body: CreateExpenseDto, userId: string): Promise<Expense> {
+  async createExpense(body: CreateExpenseDto, userId: mongoose.Schema.Types.ObjectId): Promise<Expense> {
     const existingUser = await this.usersService.getUserById(userId);
     if (!existingUser) {
       throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);

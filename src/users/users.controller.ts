@@ -16,6 +16,7 @@ import { CreateUserDto } from "./DTOs/create_user.dto";
 import { UpdateUserDto } from "./DTOs/update_user.dto";
 import { IsAdmin } from "./admin.guard";
 import { faker } from '@faker-js/faker';
+import mongoose from "mongoose";
 
 @Controller('users')
 export class UserController {
@@ -32,7 +33,7 @@ export class UserController {
   }
 
   @Get(':id')
-  async getUserById(@Param('id') id: string) {
+  async getUserById(@Param('id') id: mongoose.Schema.Types.ObjectId) {
     const user = await this.usersService.getUserById(id);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -56,13 +57,13 @@ export class UserController {
 
   @Delete(':id')
   @UseGuards(IsAdmin)
-  async deleteUser(@Param('id') id: string) {
+  async deleteUser(@Param('id') id: mongoose.Schema.Types.ObjectId) {
     return await this.usersService.deleteUser(id);
   }
 
   @Put(':id')
   @UseGuards(IsAdmin)
-  async updateUser(@Param('id') id: string, @Body() updateDto: UpdateUserDto) {
+  async updateUser(@Param('id') id: mongoose.Schema.Types.ObjectId, @Body() updateDto: UpdateUserDto) {
     return await this.usersService.updateUser(id, updateDto);
   }
 

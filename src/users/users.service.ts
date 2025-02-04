@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { CreateUserDto } from "./DTOs/create_user.dto";
 import { UpdateUserDto } from "./DTOs/update_user.dto";
 import { User } from "./schema/user.schema";
-import { Model } from "mongoose";
+import mongoose, { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
 
 @Injectable()
@@ -15,7 +15,7 @@ export class UsersService {
     return this.userModel.find().exec();
   }
 
-  async getUserById(id: string): Promise<User | null> {
+  async getUserById(id: mongoose.Schema.Types.ObjectId): Promise<User | null> {
     const user = await this.userModel.findById(id).exec();
     return user;
   }
@@ -28,7 +28,7 @@ export class UsersService {
     return newUser.save();
   }
 
-  async deleteUser(id: string): Promise<User> {
+  async deleteUser(id: mongoose.Schema.Types.ObjectId): Promise<User> {
     const deletedUser = await this.userModel.findByIdAndDelete(id).exec();
     if (!deletedUser) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -36,7 +36,7 @@ export class UsersService {
     return deletedUser;
   }
 
-  async updateUser(id: string, newUser: UpdateUserDto): Promise<User> {
+  async updateUser(id: mongoose.Schema.Types.ObjectId, newUser: UpdateUserDto): Promise<User> {
     const updatedUser = await this.userModel
       .findByIdAndUpdate(id, newUser, { new: true })
       .exec();
@@ -48,7 +48,7 @@ export class UsersService {
     return updatedUser;
   }
 
-  async addExpenseToUser(userId: string, expenseId: string) {
+  async addExpenseToUser(userId: mongoose.Schema.Types.ObjectId, expenseId: string) {
     await this.userModel.findByIdAndUpdate(
       userId,
       { $push: { expenses: expenseId } },

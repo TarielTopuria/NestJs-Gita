@@ -10,7 +10,7 @@ console.log('MONGO_URI =>', process.env.MONGO_URI);
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URI),
     UserModule,
     ExpenseModule,

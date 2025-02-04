@@ -1,5 +1,3 @@
-// hasUser.guard.ts
-
 import {
   CanActivate,
   ExecutionContext,
@@ -25,7 +23,7 @@ export class HasUserId implements CanActivate {
     if (!user) {
       throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
     }
-    request.userId = user._id.toString();
+    request.userId = user._id;
 
     return true;
   }

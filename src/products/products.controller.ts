@@ -16,6 +16,7 @@ import { ProductsService } from './products.service';
 import { PricePipe } from './Pipes/price.pipe';
 import { CreateProductDto } from './DTOs/product_create.dto';
 import { UpdateProductDto } from './DTOs/product_update.dto';
+import mongoose from 'mongoose';
 
 @Controller('products')
 export class ProductsController {
@@ -24,7 +25,7 @@ export class ProductsController {
   @Get()
   async getAllProductsWithCategory(
     @Headers('auth_token') authToken: string,
-    @Headers('user_id') userId: string,
+    @Headers('user_id') userId: mongoose.Schema.Types.ObjectId,
     @Query('category') categoryQuery: string,
     // We still use PricePipe for demonstration, or you can remove it if you want
     @Query('price', new PricePipe({ optional: false })) price: number,

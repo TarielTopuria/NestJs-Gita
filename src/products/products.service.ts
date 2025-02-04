@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import { CreateProductDto } from './DTOs/product_create.dto';
 import { UpdateProductDto } from './DTOs/product_update.dto';
@@ -19,7 +19,7 @@ export class ProductsService {
     categoryQuery?: string,
     price?: number,
     id?: string,
-    userId?: string
+    userId?: mongoose.Schema.Types.ObjectId
   ): Promise<any[]> {
     if (!header?.auth_token) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
